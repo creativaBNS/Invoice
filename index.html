@@ -961,8 +961,15 @@
                     
                     const setImg = (id, url, isLogo) => {
                         if (url) {
+                            // تحويل روابط جوجل درايف إلى روابط صور مباشرة تلقائياً
+                            let finalUrl = url;
+                            const driveMatch = url.match(/(?:file\/d\/|id=)([a-zA-Z0-9_-]+)/);
+                            if (url.includes('drive.google.com') && driveMatch && driveMatch[1]) {
+                                finalUrl = 'https://drive.google.com/uc?export=view&id=' + driveMatch[1];
+                            }
+
                             const img = document.getElementById(id);
-                            img.src = url;
+                            img.src = finalUrl;
                             img.style.display = isLogo ? 'block' : 'inline-block';
                             if(isLogo) img.style.background = 'transparent';
                         }
