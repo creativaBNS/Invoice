@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة الفواتير الذكية - 3 في 1</title>
+    <!-- تضمين مكتبة SheetJS لقراءة ملفات الإكسيل -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+
+        /* ========================================= */
+        /* 1. تنسيقات البوابة (لوحة التحكم العلوية)  */
+        /* ========================================= */
+        body {
+            font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #2c3e50;
+            overflow-x: hidden;
+        }
+
+        .portal-header {
+            background-color: #1a252f;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .portal-title {
+            color: #fff;
+            text-align: center;
+            margin: 0 0 15px 0;
+            font-size: 22px;
+        }
+
+        .tabs-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background-color: transparent;
+            color: #bdc3c7;
+            border: 2px solid #bdc3c7;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Cairo', sans-serif;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover { color: #fff; border-color: #fff; }
+        .tab-btn.active {
+            background-color: #3498db;
+            color: #fff;
+            border-color: #3498db;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+        }
+
+        .controls-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            background-color: #2c3e50;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .ctrl-btn {
+            color: white; border: none; padding: 10px 15px; border-radius: 5px;
+            font-family: 'Cairo', sans-serif; font-weight: bold; cursor: pointer;
+            font-size: 13px; transition: opacity 0.3s, transform 0.2s;
+        }
+        .ctrl-btn:hover { opacity: 0.8; transform: scale(1.02); }
+        .btn-pdf { background-color: #e74c3c; }
+        .btn-word { background-color: #27ae60; }
+        .btn-excel { background-color: #8e44ad; }
+        .btn-img { background-color: #e67e22; }
+        .btn-wm { background-color: #34495e; border: 1px solid #fff; }
+        .btn-save-db { background-color: #2980b9; box-shadow: 0 0 10px rgba(41, 128, 185, 0.5); border: 1px solid #74b9ff; }
+        .btn-load-db { background-color: #f1c40f; color: #000; box-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
+        .btn-img-settings { background-color: #16a085; box-shadow: 0 0 10px rgba(22, 160, 133, 0.5); }
+
+        .invoice-wrapper {
+            display: none;
+            padding: 30px 15px;
+            min-height: 100vh;
+        }
+
+        .invoice-wrapper.active {
+            display: block;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        [contenteditable="true"] { outline: none; transition: background-color 0.2s; }
+        [contenteditable="true"]:hover, [contenteditable="true"]:focus { background-color: #fcf3cf; border-radius: 2px; }
+
+
+        /* ========================================= */
+        /* 2. تنسيقات (الأنظمة المدمجة - Robotech)   */
+        /* ========================================= */
+        #wrapper-robo { background-color: #f5f5f5; }
+        #wrapper-robo .document-container { background-color: #ffffff; max-width: 1000px; margin: 0 auto; padding: 40px; box-shadow: 0 0 15px rgba(0,0,0,0.1); position: relative; color:#333; }
+        #wrapper-robo .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        #wrapper-robo .header-right { flex: 1; text-align: right; font-size: 15px; line-height: 1.6; font-weight: 600; }
+        #wrapper-robo .header-center { flex: 1; text-align: center; }
+        #wrapper-robo .header-center h1 { color: #2c5871; font-size: 26px; margin: 0; font-weight: 700; }
+        #wrapper-robo .header-left { flex: 1; display: flex; justify-content: flex-end; }
+        #wrapper-robo .logo-section { width: 150px; display: flex; flex-direction: column; align-items: center; }
+        #wrapper-robo .preview-img { max-width: 100%; max-height: 100px; object-fit: contain; cursor: pointer; }
+        #wrapper-robo table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 20px; direction: ltr; }
+        #wrapper-robo th, #wrapper-robo td { border: 1px solid #ffffff; padding: 10px 8px; text-align: center; font-size: 13px; word-wrap: break-word; }
+        #wrapper-robo .desc-cell { text-align: left; font-family: 'Arial', sans-serif; font-size: 12px; line-height: 1.4; padding: 12px 15px; }
+        #wrapper-robo th { background-color: #3a7599; color: white; font-weight: bold; text-transform: uppercase; font-family: 'Arial', sans-serif; font-size: 14px; letter-spacing: 0.5px; }
+        #wrapper-robo th.action-col { width: 5%; } #wrapper-robo th:nth-child(2) { width: 10%; } #wrapper-robo th:nth-child(3) { width: 15%; } #wrapper-robo th:nth-child(4) { width: 15%; } #wrapper-robo th:nth-child(5) { width: 55%; }
+        #wrapper-robo td.total-col { background-color: #2b6082 !important; color: white; font-weight: bold; font-family: 'Arial', sans-serif; }
+        #wrapper-robo td.price-cell, #wrapper-robo td.qty-cell { font-family: 'Arial', sans-serif; font-weight: bold; }
+        #wrapper-robo tbody#robo-body tr:nth-child(odd) td:not(.total-col) { background-color: #cddbe5; }
+        #wrapper-robo tbody#robo-body tr:nth-child(even) td:not(.total-col) { background-color: #e2e8ec; }
+        #wrapper-robo .arabic-total-label { background-color: #cddbe5; text-align: center; font-weight: bold; font-size: 15px; }
+        #wrapper-robo .tax-cell { background-color: #cddbe5; font-weight: bold; font-family: Arial, sans-serif; }
+        #wrapper-robo .footer { border-top: 2px solid #000; margin-top: 30px; padding-top: 10px; text-align: center; font-weight: 600; font-size: 14px; }
+
+
+        /* ========================================= */
+        /* 3. تنسيقات (RAM Electronics)              */
+        /* ========================================= */
+        #wrapper-ram { background-color: #f5f5f5; }
+        #wrapper-ram .document-container { background-color: #ffffff; max-width: 900px; margin: 0 auto; padding: 50px; box-shadow: 0 0 15px rgba(0,0,0,0.1); box-sizing: border-box; color: #333;}
+        #wrapper-ram .header { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 20px; direction: ltr; gap: 20px; }
+        #wrapper-ram .header-logo { width: 250px; }
+        #wrapper-ram .preview-img { max-width: 100%; max-height: 80px; object-fit: contain; cursor: pointer; }
+        #wrapper-ram .header-info { text-align: left; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #555; }
+        #wrapper-ram .divider { border-top: 1px solid #e0e0e0; margin: 20px 0; }
+        #wrapper-ram .customer-area { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; direction: rtl; }
+        #wrapper-ram .quote-number { font-size: 26px; display: flex; align-items: center; }
+        #wrapper-ram .customer-details { font-size: 14px; line-height: 1.8; color: #444; text-align: right; width: 50%; }
+        #wrapper-ram .red-text { color: #cc292b; font-weight: bold; }
+        #wrapper-ram table { width: 100%; border-collapse: collapse; margin-bottom: 20px; direction: rtl;}
+        #wrapper-ram th, #wrapper-ram td { padding: 12px 10px; font-size: 14px; }
+        #wrapper-ram th { font-weight: bold; color: #000; border-bottom: 2px solid #fff; }
+        #wrapper-ram th:nth-child(1), #wrapper-ram td.desc-cell { text-align: right; width: 40%;} 
+        #wrapper-ram th:nth-child(2), #wrapper-ram td.qty-cell { text-align: center; width: 10%;} 
+        #wrapper-ram th:nth-child(3), #wrapper-ram td.price-cell { text-align: center; width: 15%;} 
+        #wrapper-ram th:nth-child(4), #wrapper-ram td.tax-col { text-align: center; width: 10%;} 
+        #wrapper-ram th:nth-child(5), #wrapper-ram td.total-col { text-align: left; width: 25%;}
+        #wrapper-ram th.action-col, #wrapper-ram td.action-cell { text-align: center; width: 40px; }
+        #wrapper-ram .desc-cell { direction: ltr; text-align: left; font-family: Arial, sans-serif; font-weight: bold; font-size: 13px; }
+        #wrapper-ram .price-cell, #wrapper-ram .qty-cell, #wrapper-ram .tax-col, #wrapper-ram .total-col { font-family: Arial, sans-serif; }
+        #wrapper-ram .total-col { color: #555; }
+        #wrapper-ram tbody#ram-body tr:nth-child(odd) { background-color: #f4f4f4; }
+        #wrapper-ram tbody#ram-body tr:nth-child(even) { background-color: #ffffff; }
+        #wrapper-ram .totals-row td { padding: 8px 10px; font-size: 15px; background-color: transparent !important; }
+        #wrapper-ram .totals-label { text-align: center; font-weight: 600; color: #000; }
+        #wrapper-ram .totals-value { text-align: left; font-family: Arial, sans-serif; font-size: 16px; color: #333; }
+        #wrapper-ram .grand-total-row td { padding-top: 15px; }
+        #wrapper-ram .grand-total-line { border-top: 1px solid #000; display: block; margin-bottom: 10px; }
+        #wrapper-ram .footer { margin-top: 60px; text-align: left; font-size: 13px; color: #555; }
+
+
+        /* ========================================= */
+        /* 4. تنسيقات (Electra Group)                */
+        /* ========================================= */
+        #wrapper-elec { background-color: #eef2f5; }
+        #wrapper-elec .document-container { background-color: #ffffff; max-width: 900px; min-height: 1122px; margin: 0 auto; padding: 50px 50px 100px 50px; box-shadow: 0 0 15px rgba(0,0,0,0.1); position: relative; box-sizing: border-box; overflow: hidden; display: flex; flex-direction: column; color: #000;}
+        #wrapper-elec .watermark-container { position: absolute; bottom: 120px; right: 50px; z-index: 0; opacity: 1; pointer-events: none; width: 350px; text-align: right; }
+        #wrapper-elec .watermark-container img { max-width: 100%; height: auto; }
+        #wrapper-elec .content-layer { position: relative; z-index: 10; flex-grow: 1; }
+        #wrapper-elec .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; direction: ltr; }
+        #wrapper-elec .header-logo { width: 250px; }
+        #wrapper-elec .header-qr { width: 100px; text-align: right; }
+        #wrapper-elec .preview-img { max-width: 100%; max-height: 90px; object-fit: contain; cursor: pointer;}
+        #wrapper-elec .separator-line { border-top: 2px solid #000; margin: 5px 0 30px 0; }
+        #wrapper-elec .customer-info { text-align: right; font-family: 'Cairo', sans-serif; font-size: 14px; line-height: 1.8; margin-bottom: 20px; color: #000; }
+        #wrapper-elec .customer-info .bold-text { font-weight: 700; font-size: 15px; }
+        #wrapper-elec .doc-title { text-align: right; font-size: 14px; font-weight: bold; margin-bottom: 20px; color: #000; padding-right: 20px; }
+        #wrapper-elec table { width: 100%; border-collapse: collapse; margin-bottom: 20px; direction: ltr; }
+        #wrapper-elec th, #wrapper-elec td { padding: 10px 8px; font-size: 12px; font-family: Arial, sans-serif; border-bottom: 1px solid #f0f0f0; vertical-align: top;}
+        #wrapper-elec th { font-weight: 900; color: #000; border-bottom: 2px solid #000; text-transform: uppercase; }
+        #wrapper-elec th:nth-child(1), #wrapper-elec td.total-col { text-align: left; font-weight: bold; width: 20%;}
+        #wrapper-elec th:nth-child(2), #wrapper-elec td.price-cell { text-align: center; width: 15%;}
+        #wrapper-elec th:nth-child(3), #wrapper-elec td.qty-cell { text-align: center; width: 15%;}
+        #wrapper-elec th:nth-child(4), #wrapper-elec td.desc-cell { text-align: center; font-weight: bold; width: 50%;}
+        #wrapper-elec th.action-col, #wrapper-elec td.action-cell { text-align: center; width: 40px; }
+        #wrapper-elec .totals-area { display: flex; justify-content: flex-start; direction: ltr; margin-top: 15px; page-break-inside: avoid; }
+        #wrapper-elec .totals-table { width: 350px; border-collapse: collapse; }
+        #wrapper-elec .totals-table td { padding: 8px 10px; border: none; font-size: 13px; }
+        #wrapper-elec .total-amount { text-align: left; font-weight: bold; font-family: Arial, sans-serif; width: 40%; }
+        #wrapper-elec .total-label { text-align: center; font-family: 'Cairo', sans-serif; font-weight: 600; color: #000; }
+        #wrapper-elec .footer-bars { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; flex-direction: column; }
+        #wrapper-elec .bar-top { height: 25px; background-color: #5ba5c6; width: 100%; }
+        #wrapper-elec .bar-bottom { height: 40px; background-color: #3b2848; width: 100%; }
+
+        /* أزرار الحذف والإضافة داخل الفواتير */
+        .btn-delete { background-color: #e74c3c; color: white; border: none; padding: 3px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; }
+        .btn-add-item { background-color: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-family: 'Cairo', sans-serif; font-weight: bold; cursor: pointer; margin-top: 10px;}
+
+        /* ========================================= */
+        /* 5. إعدادات الطباعة الشاملة (Print CSS)    */
+        /* ========================================= */
+        @page { size: A4 portrait; margin: 15mm; }
+
+        @media print {
+            .no-print, .portal-header, .sidebar, .modal-overlay, #toast { display: none !important; }
+            
+            html, body { 
+                background-color: #fff !important; 
+                background: none !important;
+                padding: 0 !important; 
+                margin: 0 !important;
+                display: block !important;
+                overflow: visible !important;
+                height: auto !important;
+                min-height: auto !important;
+            }
+            
+            .invoice-wrapper { display: none !important; padding: 0 !important; margin: 0 !important; background: transparent !important; }
+            .invoice-wrapper.active { display: block !important; }
+            
+            .document-container { 
+                box-shadow: none !important; 
+                border: none !important;
+                max-width: 100% !important; 
+                width: 100% !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+                background-color: transparent !important; 
+                min-height: auto !important;
+                height: auto !important;
+                display: block !important;
+                overflow: visible !important;
+            }
+            
+            .action-col, td.action-cell { display: none !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            [contenteditable="true"]:hover { background-color: transparent !important; }
+
+            img[src^="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="] {
+                display: none !important;
+                opacity: 0 !important;
+            }
+
+            body.print-mode-elec #wrapper-elec .watermark-container { 
+                position: fixed !important; bottom: 80px !important; right: 35px !important; z-index: -1 !important; display: block !important; 
+            }
+            body.print-mode-elec #wrapper-elec .footer-bars { 
+                position: fixed !important; bottom: 0 !important; left: 0 !important; width: 100% !important; z-index: 100 !important; display: flex !important; flex-direction: column !important;
+            }
+            body.print-mode-elec #wrapper-elec .content-layer { 
+                padding-bottom: 60px !important; display: block !important; 
+            }
+            
+            #wrapper-robo th:nth-child(5) { width: 60% !important; }
+            #wrapper-ram th:nth-child(1) { width: 45% !important; }
+
+            table { page-break-inside: auto !important; }
+            tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+            td { page-break-inside: avoid !important; }
+        }
+
+        /* ========================================= */
+        /* 6. واجهة قواعد البيانات والـ Sidebar     */
+        /* ========================================= */
+        .sidebar {
+            position: fixed; top: 0; right: -350px; width: 320px; height: 100vh;
+            background: #1a252f; color: white; padding: 20px; box-shadow: -2px 0 15px rgba(0,0,0,0.5);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2000; overflow-y: auto; box-sizing: border-box;
+        }
+        .sidebar.open { right: 0; }
+        .sidebar h2 { margin-top: 0; border-bottom: 1px solid #34495e; padding-bottom: 15px; text-align: center; }
+        .invoice-list { list-style: none; padding: 0; margin: 0; }
+        .invoice-list li {
+            background: #2c3e50; margin-bottom: 10px; padding: 15px; border-radius: 8px;
+            cursor: pointer; transition: background 0.2s, transform 0.1s; border: 1px solid #34495e;
+            display: flex; flex-direction: column; gap: 5px;
+        }
+        .invoice-list li:hover { background: #34495e; transform: translateY(-2px); border-color: #3498db; }
+        .invoice-list li .inv-name { font-weight: bold; font-size: 15px; color: #fff;}
+        .invoice-list li .inv-date { font-size: 11px; color: #bdc3c7; }
+        .invoice-list li .inv-type { font-size: 11px; display: inline-block; padding: 2px 6px; border-radius: 10px; background: #2980b9; width: fit-content;}
+        
+        .close-sidebar {
+            background: #e74c3c; color: white; border: none; padding: 12px; width: 100%;
+            border-radius: 5px; cursor: pointer; margin-top: 20px; font-family: 'Cairo'; font-weight: bold;
+            transition: opacity 0.3s;
+        }
+        .close-sidebar:hover { opacity: 0.8; }
+
+        /* نافذة الحفظ */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center;
+            z-index: 3000; backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background: #fff; padding: 30px; border-radius: 12px; width: 400px; max-width: 90%;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .modal-content h3 { margin-top: 0; color: #2c3e50; }
+        .modal-content input {
+            width: 90%; padding: 12px; margin: 20px 0; border: 2px solid #bdc3c7; border-radius: 8px;
+            font-family: 'Cairo'; font-size: 15px; direction: rtl; outline: none; transition: border-color 0.3s;
+        }
+        .modal-content input:focus { border-color: #3498db; }
+        .modal-content label { display: block; text-align: right; font-weight: bold; font-size: 13px; color: #34495e; margin-top: 10px; }
+        .settings-scroll { max-height: 60vh; overflow-y: auto; padding: 0 10px; margin-bottom: 20px; }
+        .modal-btns { display: flex; justify-content: center; gap: 15px; }
+        .modal-btns button {
+            padding: 10px 25px; border: none; border-radius: 8px; cursor: pointer;
+            font-family: 'Cairo'; font-weight: bold; color: white; transition: opacity 0.3s;
+        }
+        .modal-btns button:hover { opacity: 0.8; }
+        .btn-confirm { background: #27ae60; }
+        .btn-cancel { background: #e74c3c; }
+
+        /* رسائل التنبيه (Toast) */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 8px; padding: 16px; position: fixed;
+            z-index: 4000; left: 50%; bottom: 30px; transform: translateX(-50%); font-family: 'Cairo';
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px;
+        }
+        #toast.show {
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body class="print-mode-robo"> <!-- Default print mode -->
+
+    <!-- ============================================== -->
+    <!-- لوحة التحكم الشاملة (البوابة)                  -->
+    <!-- ============================================== -->
+    <header class="portal-header no-print">
+        <h1 class="portal-title">بوابة الفواتير وعروض الأسعار الذكية</h1>
+        <div class="tabs-container">
+            <button class="tab-btn active" onclick="window.switchTab('robo')">الأنظمة المدمجة</button>
+            <button class="tab-btn" onclick="window.switchTab('ram')">RAM Electronics</button>
+            <button class="tab-btn" onclick="window.switchTab('elec')">Electra Group</button>
+        </div>
+
+        <div class="controls-container">
+            <!-- Inputs مخفية -->
+            <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" style="display: none;" onchange="window.handleExcelUpload(event)">
+            <input type="file" id="logo-upload" accept="image/*" style="display: none;" onchange="window.handleImageUpload(event, 'logo')">
+            <input type="file" id="wm-upload" accept="image/*" style="display: none;" onchange="window.handleImageUpload(event, 'watermark')">
+            <input type="file" id="qr-upload" accept="image/*" style="display: none;" onchange="window.handleImageUpload(event, 'qr')">
+
+            <!-- أزرار الإضافة الجديدة (Firebase) -->
+            <button class="ctrl-btn btn-save-db" onclick="window.openSaveModal()">حفظ الفاتورة سحابياً</button>
+            <button class="ctrl-btn btn-load-db" onclick="window.toggleSidebar()">قائمة الفواتير السابقة</button>
+            <button class="ctrl-btn btn-img-settings" onclick="window.openSettingsModal()">إعدادات روابط الصور</button>
+
+            <!-- الأزرار القديمة -->
+            <button class="ctrl-btn btn-img" onclick="document.getElementById('logo-upload').click()">رفع شعار للنموذج الحالي</button>
+            <button class="ctrl-btn btn-wm" id="btn-elec-wm" style="display:none;" onclick="document.getElementById('wm-upload').click()">رفع علامة مائية</button>
+            <button class="ctrl-btn btn-wm" id="btn-elec-qr" style="display:none;" onclick="document.getElementById('qr-upload').click()">رفع QR Code</button>
+            <button class="ctrl-btn btn-excel" onclick="document.getElementById('excel-upload').click()">استيراد من Excel</button>
+            <button class="ctrl-btn btn-word" onclick="window.exportToWord()">تصدير Word</button>
+            <button class="ctrl-btn btn-pdf" onclick="window.saveAsPDF()">طباعة / حفظ PDF</button>
+        </div>
+    </header>
+
+    <!-- Sidebar الفواتير المحفوظة -->
+    <div id="sidebar" class="sidebar no-print">
+        <h2>الفواتير المحفوظة سحابياً</h2>
+        <ul id="invoice-list" class="invoice-list">
+            <li style="text-align:center; background: transparent; border: none; cursor: default;">لا توجد بيانات حالياً</li>
+        </ul>
+        <button class="close-sidebar" onclick="window.toggleSidebar()">إغلاق القائمة</button>
+    </div>
+
+    <!-- نافذة منبثقة لحفظ الفاتورة -->
+    <div id="save-modal-overlay" class="modal-overlay no-print">
+        <div class="modal-content">
+            <h3>حفظ الفاتورة الحالية</h3>
+            <p style="font-size: 13px; color: #7f8c8d;">سيتم حفظ جميع البيانات المدخلة في الفاتورة المفتوحة حالياً لتتمكن من استرجاعها لاحقاً.</p>
+            <input type="text" id="invoice-name-input" placeholder="مثال: فاتورة مركز التدريب (نوفمبر)">
+            <div class="modal-btns">
+                <button class="btn-confirm" onclick="window.confirmSaveInvoice()">حفظ الآن</button>
+                <button class="btn-cancel" onclick="window.closeSaveModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إعدادات الصور -->
+    <div id="settings-modal-overlay" class="modal-overlay no-print">
+        <div class="modal-content" style="width: 500px;">
+            <h3>إعدادات الروابط الافتراضية</h3>
+            <p style="font-size: 13px; color: #7f8c8d;">أدخل روابط الصور المباشرة ليتم حفظها كافتراضية في جميع الفواتير.</p>
+            
+            <div class="settings-scroll">
+                <label>شعار الأنظمة المدمجة (Robotech):</label>
+                <input type="text" id="robo-logo-url" placeholder="https://example.com/logo1.png">
+                
+                <label>شعار RAM Electronics:</label>
+                <input type="text" id="ram-logo-url" placeholder="https://example.com/logo2.png">
+                
+                <label>شعار Electra Group:</label>
+                <input type="text" id="elec-logo-url" placeholder="https://example.com/logo3.png">
+                
+                <label>العلامة المائية Electra Group:</label>
+                <input type="text" id="elec-wm-url" placeholder="https://example.com/watermark.png">
+                
+                <label>QR Code Electra Group:</label>
+                <input type="text" id="elec-qr-url" placeholder="https://example.com/qr.png">
+            </div>
+
+            <div class="modal-btns">
+                <button class="btn-confirm" onclick="window.saveImageSettings()">حفظ الروابط</button>
+                <button class="btn-cancel" onclick="window.closeSettingsModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- رسائل Toast -->
+    <div id="toast" class="no-print">رسالة تنبيه</div>
+
+
+    <!-- ============================================== -->
+    <!-- الفاتورة 1: الأنظمة المدمجة (Robotech)         -->
+    <!-- ============================================== -->
+    <div id="wrapper-robo" class="invoice-wrapper active">
+        <div class="document-container">
+            <div class="header">
+                <div class="header-right" contenteditable="true">
+                    <div>مقدم الى سيادتكم مركز التدريب الإقليمي للموارد المائية و الري</div>
+                    <div>الرقم الضريبي : 530632543</div>
+                </div>
+                <div class="header-center"><h1 contenteditable="true">الأنظمة المدمجة</h1></div>
+                <div class="header-left">
+                    <div class="logo-section">
+                        <img id="robo-logo" class="preview-img target-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="شعار الشركة" style="background:#eee;" onclick="document.getElementById('logo-upload').click()">
+                    </div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="action-col no-print">إلغاء</th>
+                        <th>TOTAL</th>
+                        <th>UNIT PRICE</th>
+                        <th>QUANTITY</th>
+                        <th>DESCRIPTION</th>
+                    </tr>
+                </thead>
+                <tbody id="robo-body">
+                    <tr class="item-row">
+                        <td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td>
+                        <td class="total-col row-total">500</td>
+                        <td class="price-cell" contenteditable="true">500</td>
+                        <td class="qty-cell" contenteditable="true">1</td>
+                        <td class="desc-cell" contenteditable="true"><b>ESP32-CAM Board</b> with OV2640 Camera Module.</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td>
+                        <td class="total-col row-total">200</td>
+                        <td class="price-cell" contenteditable="true">100</td>
+                        <td class="qty-cell" contenteditable="true">2</td>
+                        <td class="desc-cell" contenteditable="true"><b>2-Meter Power Cable</b> measuring 2 meters in length.</td>
+                    </tr>
+                </tbody>
+                <tbody>
+                    <tr>
+                        <td class="action-cell no-print"></td>
+                        <td class="total-col subtotal-val">700</td>
+                        <td colspan="3" class="arabic-total-label" dir="rtl">الإجمالي</td>
+                    </tr>
+                    <tr>
+                        <td class="action-cell no-print"></td>
+                        <td class="total-col grandtotal-val">798</td>
+                        <td class="tax-cell tax-val" contenteditable="true" dir="ltr">%14</td>
+                        <td colspan="2" class="arabic-total-label" dir="rtl">الإجمالي بالضرائب</td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn-add-item no-print" onclick="window.addRow()">+ إضافة عنصر جديد</button>
+            <div class="footer" contenteditable="true">الصفحة: 1 من 1</div>
+        </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- الفاتورة 2: RAM Electronics                    -->
+    <!-- ============================================== -->
+    <div id="wrapper-ram" class="invoice-wrapper">
+        <div class="document-container">
+            <div class="header">
+                <div class="header-logo">
+                    <img id="ram-logo" class="preview-img target-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="شعار الشركة" style="background:#eee;" onclick="document.getElementById('logo-upload').click()">
+                </div>
+                <div class="header-info" contenteditable="true">
+                    RAM Import & Export<br>32 El Falaky St. Bab El<br>Louk Tahreer, Cairo, Egypt
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="customer-area">
+                <div class="quote-number red-text">
+                    <span contenteditable="true">رقم عرض السعر</span>
+                    <span contenteditable="true" dir="ltr" style="margin-right: 8px;">S62094</span>
+                </div>
+                <div class="customer-details">
+                    <div class="red-text" contenteditable="true" style="margin-bottom: 20px;">المحركات</div>
+                    <div contenteditable="true">مركز التدريب الإقليمي للموارد المائية والري</div><br>
+                    <div contenteditable="true">بجوار البنك الاهلي المصرى - ميدان ليلة القدر<br>6th of October<br>مصر<br>معرف الضريبة: 530632543</div>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="action-col no-print"></th>
+                        <th>الوصف</th>
+                        <th>الكمية</th>
+                        <th>سعر الوحدة</th>
+                        <th>الضرائب</th>
+                        <th>المبلغ</th>
+                    </tr>
+                </thead>
+                <tbody id="ram-body">
+                    <tr class="item-row">
+                        <td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td>
+                        <td class="desc-cell" contenteditable="true">Brushless Motors</td>
+                        <td class="qty-cell" contenteditable="true">2</td>
+                        <td class="price-cell" contenteditable="true">7900.00</td>
+                        <td class="tax-cell tax-val" contenteditable="true">14%</td>
+                        <td class="total-col row-total">EGP 15,800.00</td>
+                    </tr>
+                </tbody>
+                <tbody>
+                    <tr style="height: 20px;"><td colspan="6"></td></tr>
+                    <tr class="totals-row">
+                        <td class="no-print"></td><td colspan="3" class="totals-label">المبلغ دون الضريبة</td><td class="totals-value subtotal-val" colspan="2">EGP 15,800.00</td>
+                    </tr>
+                    <tr class="totals-row">
+                        <td class="no-print"></td><td colspan="3" class="totals-label tax-val-label" contenteditable="true">Tax 14%</td><td class="totals-value tax-amount-val" colspan="2">EGP 2,212.00</td>
+                    </tr>
+                    <tr class="totals-row grand-total-row">
+                        <td class="no-print"></td><td colspan="3" class="totals-label">الإجمالي</td>
+                        <td class="totals-value" colspan="2"><span class="grand-total-line"></span><span class="grandtotal-val">EGP 18,012.00</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button class="btn-add-item no-print" onclick="window.addRow()">+ إضافة صنف</button>
+            <div class="footer" contenteditable="true">شروط السداد: سداد فوير</div>
+        </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- الفاتورة 3: Electra Group                      -->
+    <!-- ============================================== -->
+    <div id="wrapper-elec" class="invoice-wrapper">
+        <div class="document-container">
+            <div class="watermark-container">
+                <img id="elec-wm" class="target-wm" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="" style="display: none; cursor: pointer;" onclick="document.getElementById('wm-upload').click()">
+            </div>
+            <div class="content-layer">
+                <div class="header">
+                    <div class="header-logo">
+                        <img id="elec-logo" class="preview-img target-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="شعار الشركة" style="background:#eee;" onclick="document.getElementById('logo-upload').click()">
+                    </div>
+                    <div class="header-qr">
+                        <img id="elec-qr" class="preview-img target-qr" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="QR Code" style="display: none; cursor:pointer;" onclick="document.getElementById('qr-upload').click()">
+                    </div>
+                </div>
+                <div class="separator-line"></div>
+                <div class="customer-info" contenteditable="true">
+                    <div class="bold-text">مركز التدريب الإقليمي للموارد المائية والري</div>
+                    <div class="bold-text">معرف الضريبة: 530632543</div>
+                    <div class="bold-text" style="margin-top: 15px;">تحية طيبة وبعد ،،،،،،،</div>
+                    <div class="bold-text" style="margin-top: 15px;">مقدم لسيادتكم عرض أسعار القطع والأجهزة الالكترونية المذكورة ادناه:</div>
+                </div>
+                <div class="doc-title" contenteditable="true">وحدة إرسال رسائل الحساسات</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th contenteditable="true">TOTAL PRICE</th>
+                            <th contenteditable="true">UNI PRICE</th>
+                            <th contenteditable="true">UNIT</th>
+                            <th contenteditable="true">QUANTITY</th>
+                            <th class="action-col no-print"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="elec-body">
+                        <tr class="item-row">
+                            <td class="total-col row-total">6,700.00EGP</td>
+                            <td class="price-cell" contenteditable="true">6,700.00</td>
+                            <td class="qty-cell" contenteditable="true">1.00Units</td>
+                            <td class="desc-cell" contenteditable="true">GSM SIM Communication Module for Sending SMS...</td>
+                            <td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button class="btn-add-item no-print" onclick="window.addRow()">+ إضافة صنف جديد</button>
+                <div class="totals-area">
+                    <table class="totals-table">
+                        <tr>
+                            <td class="total-amount subtotal-val">6,700.00EGP</td>
+                            <td class="total-label" contenteditable="true">المبلغ دون الضريبة</td>
+                        </tr>
+                        <tr>
+                            <td class="total-amount tax-amount-val">938.00EGP</td>
+                            <td class="total-label tax-val-label" contenteditable="true">Tax 14%</td>
+                        </tr>
+                        <tr>
+                            <td class="total-amount grandtotal-val">7,638.00EGP</td>
+                            <td class="total-label" contenteditable="true">الاجمالي</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="footer-bars"><div class="bar-top"></div><div class="bar-bottom"></div></div>
+        </div>
+    </div>
+
+
+    <!-- ============================================== -->
+    <!-- JAVASCRIPT: عقل البوابة                        -->
+    <!-- ============================================== -->
+    <script>
+        // ربط المتغيرات الأساسية بالنافذة لتكون متاحة للكود البرمجي الخاص بقواعد البيانات
+        window.currentTab = 'robo'; 
+
+        // 1. نظام التنقل بين الفواتير
+        window.switchTab = function(tabId) {
+            window.currentTab = tabId;
+            
+            // تحديث الأزرار العلوية
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.querySelector(`.tab-btn[onclick="window.switchTab('${tabId}')"]`) || document.querySelector(`.tab-btn[onclick="switchTab('${tabId}')"]`);
+            if(activeBtn) activeBtn.classList.add('active');
+
+            // إخفاء كل الفواتير وإظهار المطلوبة
+            document.querySelectorAll('.invoice-wrapper').forEach(wrapper => wrapper.classList.remove('active'));
+            document.getElementById('wrapper-' + tabId).classList.add('active');
+
+            // إظهار/إخفاء أزرار Electra المخصصة للعلامة المائية والـ QR
+            document.getElementById('btn-elec-wm').style.display = (tabId === 'elec') ? 'inline-block' : 'none';
+            document.getElementById('btn-elec-qr').style.display = (tabId === 'elec') ? 'inline-block' : 'none';
+
+            // تحديث كلاس body للطباعة 
+            document.body.className = 'print-mode-' + tabId;
+
+            window.calculateTotals();
+        }
+
+        // 2. نظام الحسابات الموحد 
+        function formatMoney(num, format) {
+            let str = num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            if (format === 'robo') return num.toFixed(2).replace(/\.00$/, ''); 
+            if (format === 'ram') return 'EGP ' + str; 
+            if (format === 'elec') return str + 'EGP'; 
+            return str;
+        }
+
+        window.calculateTotals = function() {
+            const wrapper = document.getElementById('wrapper-' + window.currentTab);
+            let subtotal = 0;
+            const rows = wrapper.querySelectorAll('.item-row');
+
+            rows.forEach(row => {
+                const priceText = row.querySelector('.price-cell').innerText || "0";
+                const qtyText = row.querySelector('.qty-cell').innerText || "0";
+                
+                const price = parseFloat(priceText.replace(/[^0-9.-]+/g,"")) || 0;
+                const qty = parseFloat(qtyText.replace(/[^0-9.-]+/g,"")) || 0;
+                
+                const rowTotal = price * qty;
+                row.querySelector('.row-total').innerText = formatMoney(rowTotal, window.currentTab);
+                subtotal += rowTotal;
+            });
+
+            const subDisplay = wrapper.querySelector('.subtotal-val');
+            if(subDisplay) subDisplay.innerText = formatMoney(subtotal, window.currentTab);
+
+            let taxRate = 0;
+            const taxCell = wrapper.querySelector('.tax-val'); 
+            const taxLabel = wrapper.querySelector('.tax-val-label'); 
+            
+            if(window.currentTab === 'robo' && taxCell) {
+                taxRate = parseFloat(taxCell.innerText.replace(/[^0-9.]/g, '')) || 0;
+            } else if ((window.currentTab === 'ram' || window.currentTab === 'elec') && taxLabel) {
+                taxRate = parseFloat(taxLabel.innerText.replace(/[^0-9.]/g, '')) || 0;
+            }
+
+            const taxAmount = subtotal * (taxRate / 100);
+            
+            const taxAmountDisplay = wrapper.querySelector('.tax-amount-val');
+            if(taxAmountDisplay) taxAmountDisplay.innerText = formatMoney(taxAmount, window.currentTab);
+
+            const grandTotal = subtotal + taxAmount;
+            const grandDisplay = wrapper.querySelector('.grandtotal-val');
+            if(grandDisplay) grandDisplay.innerText = formatMoney(grandTotal, window.currentTab);
+        }
+
+        document.body.addEventListener('input', function(e) {
+            if (e.target.classList.contains('price-cell') || 
+                e.target.classList.contains('qty-cell') || 
+                e.target.classList.contains('tax-val') ||
+                e.target.classList.contains('tax-val-label')) {
+                window.calculateTotals();
+            }
+        });
+
+        // 3. نظام إضافة الصفوف 
+        window.addRow = function() {
+            const tbody = document.getElementById(window.currentTab + '-body');
+            const newRow = document.createElement('tr');
+            newRow.className = 'item-row';
+
+            if (window.currentTab === 'robo') {
+                newRow.innerHTML = `<td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td><td class="total-col row-total">0</td><td class="price-cell" contenteditable="true">0</td><td class="qty-cell" contenteditable="true">1</td><td class="desc-cell" contenteditable="true">وصف الأداة...</td>`;
+            } else if (window.currentTab === 'ram') {
+                newRow.innerHTML = `<td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td><td class="desc-cell" contenteditable="true">Item Name</td><td class="qty-cell" contenteditable="true">1</td><td class="price-cell" contenteditable="true">0.00</td><td class="tax-cell tax-val" contenteditable="true">14%</td><td class="total-col row-total">EGP 0.00</td>`;
+            } else if (window.currentTab === 'elec') {
+                newRow.innerHTML = `<td class="total-col row-total">0.00EGP</td><td class="price-cell" contenteditable="true">0.00</td><td class="qty-cell" contenteditable="true">1.00Units</td><td class="desc-cell" contenteditable="true">Item Description</td><td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td>`;
+            }
+            tbody.appendChild(newRow);
+            window.calculateTotals();
+        }
+
+        window.deleteRow = function(btn) {
+            btn.closest('tr').remove();
+            window.calculateTotals();
+        }
+
+        // 4. نظام رفع ملفات Excel 
+        window.handleExcelUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+
+                if (json.length > 0) {
+                    const tbody = document.getElementById(window.currentTab + '-body');
+                    for (let i = 1; i < json.length; i++) {
+                        let row = json[i];
+                        if (!row || row.length === 0) continue;
+                        let desc = row[0] || ''; let qty = row[1] || 1; let price = row[2] || 0;
+
+                        if(desc.toString().trim() !== '') {
+                            const newRow = document.createElement('tr');
+                            newRow.className = 'item-row';
+                            if (window.currentTab === 'robo') {
+                                newRow.innerHTML = `<td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td><td class="total-col row-total">0</td><td class="price-cell" contenteditable="true">${price}</td><td class="qty-cell" contenteditable="true">${qty}</td><td class="desc-cell" contenteditable="true">${desc}</td>`;
+                            } else if (window.currentTab === 'ram') {
+                                newRow.innerHTML = `<td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td><td class="desc-cell" contenteditable="true">${desc}</td><td class="qty-cell" contenteditable="true">${qty}</td><td class="price-cell" contenteditable="true">${price}</td><td class="tax-cell tax-val" contenteditable="true">14%</td><td class="total-col row-total">0</td>`;
+                            } else if (window.currentTab === 'elec') {
+                                newRow.innerHTML = `<td class="total-col row-total">0</td><td class="price-cell" contenteditable="true">${price}</td><td class="qty-cell" contenteditable="true">${qty}Units</td><td class="desc-cell" contenteditable="true">${desc}</td><td class="action-cell no-print"><button class="btn-delete" onclick="window.deleteRow(this)">X</button></td>`;
+                            }
+                            tbody.appendChild(newRow);
+                        }
+                    }
+                    window.calculateTotals();
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
+        // 5. نظام رفع الصور 
+        window.handleImageUpload = function(event, type) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const url = URL.createObjectURL(file);
+            const wrapper = document.getElementById('wrapper-' + window.currentTab);
+
+            if(type === 'logo') {
+                const img = wrapper.querySelector('.target-logo');
+                if(img) { img.src = url; img.style.background = 'transparent'; img.style.display = 'block'; }
+            } else if (type === 'watermark' && window.currentTab === 'elec') {
+                const img = wrapper.querySelector('.target-wm');
+                if(img) { img.src = url; img.style.display = 'inline-block'; }
+            } else if (type === 'qr' && window.currentTab === 'elec') {
+                const img = wrapper.querySelector('.target-qr');
+                if(img) { img.src = url; img.style.display = 'inline-block'; }
+            }
+        }
+
+        // 6. نظام التصدير
+        window.exportToWord = function() {
+            const wrapper = document.getElementById('wrapper-' + window.currentTab);
+            const actionCols = wrapper.querySelectorAll('.action-col, .action-cell');
+            actionCols.forEach(col => col.style.display = 'none');
+            
+            const content = wrapper.innerHTML;
+            actionCols.forEach(col => col.style.display = 'table-cell');
+
+            const preHtml = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Invoice</title><style>body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; } table { border-collapse: collapse; width: 100%; direction: ltr; } th, td { padding: 8px; border-bottom: 1px solid #ccc; text-align: center; } .desc-cell { text-align: left; } .total-col { font-weight: bold; } .totals-table { width: 350px; } .totals-table td { border: none; } .totals-label { text-align: center; font-weight: bold; }</style></head><body>`;
+            const postHtml = "</body></html>";
+            const html = preHtml + content + postHtml;
+
+            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+            const url = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(html);
+            const downloadLink = document.createElement("a");
+            
+            document.body.appendChild(downloadLink);
+            if (navigator.msSaveOrOpenBlob) {
+                navigator.msSaveOrOpenBlob(blob, 'Invoice.doc');
+            } else {
+                downloadLink.href = url;
+                downloadLink.download = 'Invoice_' + window.currentTab + '.doc';
+                downloadLink.click();
+            }
+            document.body.removeChild(downloadLink);
+        }
+
+        window.saveAsPDF = function() {
+            if(window.currentTab === 'elec') {
+                window.showToast("تأكد من تفعيل خيار 'Background graphics' في إعدادات الطباعة.", false);
+            } else {
+                window.showToast("تأكد من إلغاء خيار 'Headers and footers' في إعدادات الطباعة.", false);
+            }
+            setTimeout(() => window.print(), 1000);
+        }
+
+        // تشغيل الحسابات لأول مرة 
+        window.calculateTotals();
+    </script>
+
+    <!-- ============================================== -->
+    <!-- FIREBASE INTEGRATION                           -->
+    <!-- ============================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // إعدادات Firebase من المستخدم
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFjd-HIl3GVAAnhPUgxcVw2J3TtOligQk",
+            authDomain: "invoice-70f41.firebaseapp.com",
+            projectId: "invoice-70f41",
+            storageBucket: "invoice-70f41.firebasestorage.app",
+            messagingSenderId: "164862087942",
+            appId: "1:164862087942:web:56884a96b429e88ab38487",
+            measurementId: "G-MBTXMJK2Q6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // متغيرات البيئة العامة المطلوبة للبنية الهيكلية
+        const defaultAppId = typeof __app_id !== 'undefined' ? __app_id : 'invoice-v1';
+        let currentUser = null;
+
+        // دالة لعرض رسائل التنبيه (Toast)
+        window.showToast = (msg, isError = false) => {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.style.backgroundColor = isError ? '#e74c3c' : '#2ecc71';
+            toast.className = 'toast show';
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // المصادقة والاتصال بقاعدة البيانات بشكل آمن
+        const initAuth = async () => {
+            try {
+                // التحقق من وجود توكن مصادقة مسبق
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+                    currentUser = userCredential.user;
+                } else {
+                    // تسجيل دخول كزائر مجهول (Anonymous)
+                    const userCredential = await signInAnonymously(auth);
+                    currentUser = userCredential.user;
+                }
+                console.log("متصل بقاعدة البيانات بنجاح. المعرف:", currentUser.uid);
+                
+                // تحميل إعدادات الصور المحفوظة إن وجدت بمجرد تسجيل الدخول
+                window.loadImageSettings();
+                
+            } catch (error) {
+                console.error("خطأ في الاتصال بقاعدة البيانات:", error);
+                currentUser = { uid: "local-test-user-id" }; 
+                
+                if (error.code === 'auth/operation-not-allowed') {
+                    window.showToast("تنبيه: يجب تفعيل 'Anonymous' من قائمة Authentication في Firebase.", true);
+                } else {
+                    window.showToast("تعذر الاتصال بالمصادقة. سيتم المحاولة في وضع التجربة.", true);
+                }
+            }
+        };
+
+        // بدء الاتصال
+        initAuth();
+
+        // دوال التحكم بالنافذة المنبثقة
+        window.openSaveModal = () => {
+            if(!currentUser) return window.showToast("جاري الاتصال بقاعدة البيانات... يرجى الانتظار قليلاً.", true);
+            document.getElementById('save-modal-overlay').style.display = 'flex';
+        };
+
+        window.closeSaveModal = () => {
+            document.getElementById('save-modal-overlay').style.display = 'none';
+            document.getElementById('invoice-name-input').value = '';
+        };
+
+        // دوال نافذة الإعدادات للصور
+        window.openSettingsModal = () => {
+            if(!currentUser) return window.showToast("يجب الاتصال بقاعدة البيانات أولاً.", true);
+            document.getElementById('settings-modal-overlay').style.display = 'flex';
+        };
+
+        window.closeSettingsModal = () => {
+            document.getElementById('settings-modal-overlay').style.display = 'none';
+        };
+
+        window.saveImageSettings = async () => {
+            if (!currentUser) return;
+            const settings = {
+                roboLogo: document.getElementById('robo-logo-url').value.trim(),
+                ramLogo: document.getElementById('ram-logo-url').value.trim(),
+                elecLogo: document.getElementById('elec-logo-url').value.trim(),
+                elecWm: document.getElementById('elec-wm-url').value.trim(),
+                elecQr: document.getElementById('elec-qr-url').value.trim()
+            };
+            
+            try {
+                window.showToast("جاري حفظ الإعدادات...");
+                const docRef = doc(db, 'artifacts', defaultAppId, 'users', currentUser.uid, 'settings', 'images');
+                await setDoc(docRef, settings, { merge: true });
+                window.showToast("تم حفظ الروابط الافتراضية بنجاح!");
+                window.closeSettingsModal();
+                
+                // تطبيق الصور فوراً على الواجهة
+                window.loadImageSettings();
+            } catch (error) {
+                console.error("Error saving settings: ", error);
+                window.showToast("حدث خطأ أثناء حفظ الإعدادات", true);
+            }
+        };
+
+        window.loadImageSettings = async () => {
+            if (!currentUser) return;
+            try {
+                const docRef = doc(db, 'artifacts', defaultAppId, 'users', currentUser.uid, 'settings', 'images');
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    const setImg = (id, url, isLogo) => {
+                        if (url) {
+                            const img = document.getElementById(id);
+                            img.src = url;
+                            img.style.display = isLogo ? 'block' : 'inline-block';
+                            if(isLogo) img.style.background = 'transparent';
+                        }
+                    };
+
+                    setImg('robo-logo', data.roboLogo, true);
+                    setImg('ram-logo', data.ramLogo, true);
+                    setImg('elec-logo', data.elecLogo, true);
+                    setImg('elec-wm', data.elecWm, false);
+                    setImg('elec-qr', data.elecQr, false);
+                    
+                    document.getElementById('robo-logo-url').value = data.roboLogo || '';
+                    document.getElementById('ram-logo-url').value = data.ramLogo || '';
+                    document.getElementById('elec-logo-url').value = data.elecLogo || '';
+                    document.getElementById('elec-wm-url').value = data.elecWm || '';
+                    document.getElementById('elec-qr-url').value = data.elecQr || '';
+                }
+            } catch (error) {
+                console.error("Error loading settings: ", error);
+            }
+        };
+
+        // دالة حفظ الفاتورة الحالية في Firebase
+        window.confirmSaveInvoice = async () => {
+            const nameInput = document.getElementById('invoice-name-input');
+            const name = nameInput.value.trim();
+            if(!name) return window.showToast("رجاءً قم بإدخال اسم أو مرجع للفاتورة", true);
+
+            // جلب محتوى الفاتورة الحالي بالكامل 
+            const activeWrapper = document.getElementById('wrapper-' + window.currentTab);
+            const containerHtml = activeWrapper.querySelector('.document-container').innerHTML;
+
+            const invoiceData = {
+                name: name,
+                tabId: window.currentTab,
+                htmlContent: containerHtml,
+                timestamp: Date.now()
+            };
+
+            try {
+                window.showToast("جاري الحفظ...");
+                const colRef = collection(db, 'artifacts', defaultAppId, 'users', currentUser.uid, 'invoices');
+                await addDoc(colRef, invoiceData);
+                
+                window.showToast("تم حفظ الفاتورة بنجاح في قاعدة البيانات!");
+                window.closeSaveModal();
+            } catch (error) {
+                console.error("Error saving document: ", error);
+                window.showToast("حدث خطأ أثناء حفظ الفاتورة.", true);
+            }
+        };
+
+        // دالة فتح/إغلاق القائمة الجانبية وجلب الفواتير المحفوظة
+        window.toggleSidebar = async () => {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                return;
+            }
+
+            if(!currentUser) return window.showToast("جاري الاتصال بقاعدة البيانات... يرجى الانتظار.", true);
+
+            sidebar.classList.add('open');
+            const list = document.getElementById('invoice-list');
+            list.innerHTML = '<li style="text-align:center; background:transparent; border:none;">جاري جلب الفواتير...</li>';
+
+            try {
+                const colRef = collection(db, 'artifacts', defaultAppId, 'users', currentUser.uid, 'invoices');
+                const snapshot = await getDocs(colRef);
+                
+                const invoices = [];
+                snapshot.forEach(doc => {
+                    invoices.push({ id: doc.id, ...doc.data() });
+                });
+
+                // ترتيب الفواتير من الأحدث للأقدم
+                invoices.sort((a, b) => b.timestamp - a.timestamp);
+
+                list.innerHTML = '';
+                if(invoices.length === 0) {
+                    list.innerHTML = '<li style="text-align:center; background:transparent; border:none; color:#bdc3c7;">لا توجد فواتير محفوظة بعد.</li>';
+                } else {
+                    invoices.forEach(inv => {
+                        const li = document.createElement('li');
+                        const date = new Date(inv.timestamp).toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        
+                        let typeName = "الأنظمة المدمجة";
+                        if(inv.tabId === 'ram') typeName = "RAM Electronics";
+                        if(inv.tabId === 'elec') typeName = "Electra Group";
+
+                        li.innerHTML = `
+                            <span class="inv-name">${inv.name}</span>
+                            <span class="inv-type">${typeName}</span>
+                            <span class="inv-date">${date}</span>
+                        `;
+                        
+                        // عند الضغط على الفاتورة يتم عرضها
+                        li.onclick = () => loadSavedInvoice(inv);
+                        list.appendChild(li);
+                    });
+                }
+
+            } catch (error) {
+                console.error("Error getting documents: ", error);
+                list.innerHTML = '<li style="text-align:center; background:transparent; border:none; color:#e74c3c;">حدث خطأ في تحميل الفواتير.</li>';
+            }
+        };
+
+        // دالة استرجاع الفاتورة وعرضها
+        window.loadSavedInvoice = function(invData) {
+            window.switchTab(invData.tabId);
+            
+            const activeWrapper = document.getElementById('wrapper-' + invData.tabId);
+            const container = activeWrapper.querySelector('.document-container');
+            container.innerHTML = invData.htmlContent;
+            
+            window.calculateTotals();
+            window.showToast(`تم استرجاع الفاتورة: ${invData.name}`);
+            window.toggleSidebar(); // إغلاق القائمة الجانبية بعد التحميل
+        }
+
+    </script>
+</body>
+</html>
